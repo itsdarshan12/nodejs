@@ -1,4 +1,0 @@
-[submodule ".github"]
-	path = .github
-	url = https://github.com/itsdarshan12/shared-github-config.git
-	branch = development
