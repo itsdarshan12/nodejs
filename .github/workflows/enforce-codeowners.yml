@@ -13,47 +13,52 @@ on:
       - development
       - quality
       - main
+      - hotfix
 
 jobs:
   force-codeowners:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout branch
+      - name: Checkout target or PR branch
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Determine target branch
+      - name: Detect the target branch
         id: vars
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "branch=${{ github.event.pull_request.base.ref }}" >> $GITHUB_OUTPUT
           else
             echo "branch=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
-          fi
 
-      - name: Overwrite CODEOWNERS based on target branch
+      - name: Force update CODEOWNERS
         run: |
           TARGET_BRANCH="${{ steps.vars.outputs.branch }}"
           echo "Detected target branch: $TARGET_BRANCH"
 
-          if [[ "$TARGET_BRANCH" == "development" ]]; then
-            echo "* @Ravikiran023" > .github/CODEOWNERS
-            echo "Applied: * @Ravikiran023"
+          case "$TARGET_BRANCH" in
+            development)
+              echo "* @Ravikiran023" > .github/CODEOWNERS
+              ;;
+            quality)
+              echo "* @itsdarshan12" > .github/CODEOWNERS
+              ;;
+            main)
+              echo "* @treadstone26" > .github/CODEOWNERS
+              ;;
+            hotfix)
+              echo "* @treadstone26" > .github/CODEOWNERS
+              ;;
+            *)
+              echo "No rule defined for branch: $TARGET_BRANCH"
+              exit 0
+              ;;
+          esac
 
-          elif [[ "$TARGET_BRANCH" == "quality" ]]; then
-            echo "* @itsdarshan12" > .github/CODEOWNERS
-            echo "Applied: * @itsdarshan12"
-
-          elif [[ "$TARGET_BRANCH" == "main" ]]; then
-            echo "* @treadstone26" > .github/CODEOWNERS
-            echo "Applied: * @treadstone26"
-          else
-            echo "No enforcement rule for branch: $TARGET_BRANCH"
-            exit 0
-          fi
+          echo "✅ Applied CODEOWNERS rule for $TARGET_BRANCH"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
