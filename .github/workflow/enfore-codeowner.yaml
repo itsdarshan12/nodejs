@@ -1,0 +1,12 @@
+name: Block CODEOWNERS Modification
+
+on: [pull_request]
+
+jobs:
+  check-codeowners:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          git diff --name-only origin/${{ github.event.pull_request.base.ref }} | grep -q "^.github/CODEOWNERS$" \
+          && { echo "❌ CODEOWNERS change not allowed"; exit 1; } || echo "✅ CODEOWNERS unchanged"
