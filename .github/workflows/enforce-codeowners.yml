@@ -33,6 +33,7 @@ jobs:
             echo "branch=${{ github.event.pull_request.base.ref }}" >> $GITHUB_OUTPUT
           else
             echo "branch=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Force update CODEOWNERS
         run: |
