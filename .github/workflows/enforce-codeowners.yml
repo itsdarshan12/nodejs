@@ -24,15 +24,15 @@ jobs:
 
           if [[ "${{ github.event.pull_request.base.ref }}" == "development" ]]; then
             echo "Ravikiran023 owns development"
-            echo "Ravikiran023  *" > .github/CODEOWNERS
+            echo "* @Ravikiran023" > .github/CODEOWNERS
 
           elif [[ "${{ github.event.pull_request.base.ref }}" == "quality" ]]; then
             echo "itsdarshan12 owns quality"
-            echo "itsdarshan12  *" > .github/CODEOWNERS
+            echo "* @itsdarshan12" > .github/CODEOWNERS
 
           elif [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
             echo "treadstone26 owns main"
-            echo "treadstone26  *" > .github/CODEOWNERS
+            echo "* @treadstone26" > .github/CODEOWNERS
           fi
 
           git config user.name "github-actions[bot]"
