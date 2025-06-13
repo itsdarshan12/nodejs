@@ -1,4 +1,4 @@
-name: Enforce Target Branch CODEOWNERS
+name: Block CODEOWNERS Modifications
 
 on:
   pull_request:
@@ -7,7 +7,6 @@ on:
       - quality
       - main
       - hotfix
-
   push:
     branches:
       - development
@@ -16,58 +15,20 @@ on:
       - hotfix
 
 jobs:
-  force-codeowners:
+  block-codeowners:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout PR or push branch
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
-      - name: Detect target and head ref
-        id: vars
+      - name: Detect CODEOWNERS changes
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "branch=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
-            echo "headref=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
+          if git diff --name-only origin/${{ github.event.pull_request.base.ref || github.ref_name }} | grep -q "^.github/CODEOWNERS$"; then
+            echo "❌ CODEOWNERS file modification detected! This is not allowed."
+            exit 1
           else
-            echo "branch=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
-            echo "headref=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
+            echo "✅ No CODEOWNERS changes detected. Proceeding..."
           fi
-
-      - name: Force update CODEOWNERS
-        run: |
-          TARGET_BRANCH="${{ steps.vars.outputs.branch }}"
-          HEAD_REF="${{ steps.vars.outputs.headref }}"
-          echo "✅ Detected target branch: $TARGET_BRANCH"
-
-          case "$TARGET_BRANCH" in
-            development)
-              echo "* @Ravikiran023" > .github/CODEOWNERS
-              ;;
-            quality)
-              echo "* @itsdarshan12" > .github/CODEOWNERS
-              ;;
-            main | hotfix)
-              echo "* @treadstone26" > .github/CODEOWNERS
-              ;;
-            *)
-              echo "❌ No rule defined for branch: $TARGET_BRANCH"
-              exit 0
-              ;;
-          esac
-
-          echo "✅ Applied CODEOWNERS rule for $TARGET_BRANCH"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add .github/CODEOWNERS
-          git commit -m "ci: enforce CODEOWNERS for $TARGET_BRANCH" || echo "ℹ️ No changes to commit"
-
-          # Use HEAD_REF for PRs, fallback to TARGET_BRANCH for pushes
-          REMOTE_BRANCH="${HEAD_REF:-$TARGET_BRANCH}"
-
-          git push origin HEAD:$REMOTE_BRANCH || echo "ℹ️ Push skipped or failed"
