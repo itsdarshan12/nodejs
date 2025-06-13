@@ -1,13 +1,6 @@
-name: Sync CODEOWNERS Template
+name: Enforce Target Branch CODEOWNERS
 
 on:
-  push:
-    branches:
-      - development
-      - quality
-      - main
-      - hotfix
-
   pull_request:
     branches:
       - development
@@ -15,38 +8,62 @@ on:
       - main
       - hotfix
 
+  push:
+    branches:
+      - development
+      - quality
+      - main
+      - hotfix
+
 jobs:
-  sync-codeowners:
+  force-codeowners:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout PR or push branch
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
-      - name: Determine branch and copy template
+      - name: Detect target and head ref
+        id: vars
         run: |
-          BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
-          echo "🧠 Detected branch: $BRANCH"
-
-          TEMPLATE_FILE=".github/templates/CODEOWNERS.$BRANCH"
-          TARGET_FILE=".github/CODEOWNERS"
-
-          if [ ! -f "$TEMPLATE_FILE" ]; then
-            echo "⚠️ No template found for $BRANCH. Skipping..."
-            exit 0
-          fi
-
-          cp "$TEMPLATE_FILE" "$TARGET_FILE"
-
-          if ! git diff --quiet; then
-            echo "✅ CODEOWNERS updated from template. Committing..."
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add "$TARGET_FILE"
-            git commit -m "ci: synced CODEOWNERS from $TEMPLATE_FILE"
-            git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "branch=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+            echo "headref=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
           else
-            echo "✅ CODEOWNERS already up to date."
+            echo "branch=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
+            echo "headref=${GITHUB_REF##*/}" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Force update CODEOWNERS
+        run: |
+          TARGET_BRANCH="${{ steps.vars.outputs.branch }}"
+          echo "✅ Detected target branch: $TARGET_BRANCH"
+
+          case "$TARGET_BRANCH" in
+            development)
+              echo "* @Ravikiran023" > .github/CODEOWNERS
+              ;;
+            quality)
+              echo "* @itsdarshan12" > .github/CODEOWNERS
+              ;;
+            main | hotfix)
+              echo "* @treadstone26" > .github/CODEOWNERS
+              ;;
+            *)
+              echo "❌ No rule defined for branch: $TARGET_BRANCH"
+              exit 0
+              ;;
+          esac
+
+          echo "✅ Applied CODEOWNERS rule for $TARGET_BRANCH"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add .github/CODEOWNERS
+          git commit -m "ci: enforce CODEOWNERS for $TARGET_BRANCH" || echo "ℹ️ No changes to commit"
+
+          git push origin HEAD:${{ steps.vars.outputs.headref }} || echo "ℹ️ Push skipped (probably push event)"
