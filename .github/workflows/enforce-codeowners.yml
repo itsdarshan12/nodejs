@@ -20,50 +20,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout target or PR branch
+      - name: Checkout PR or push branch
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
-      - name: Detect the target branch
+      - name: Detect target branch
         id: vars
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "branch=${{ github.event.pull_request.base.ref }}" >> $GITHUB_OUTPUT
+            echo "headref=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
           else
             echo "branch=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+            echo "headref=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
           fi
 
       - name: Force update CODEOWNERS
         run: |
           TARGET_BRANCH="${{ steps.vars.outputs.branch }}"
-          echo "Detected target branch: $TARGET_BRANCH"
+          echo "Target branch: $TARGET_BRANCH"
 
           case "$TARGET_BRANCH" in
             development)
-              echo "* @treadstone26" > .github/CODEOWNERS
-              ;;
-            quality)
               echo "* @Ravikiran023" > .github/CODEOWNERS
               ;;
-            main)
+            quality)
               echo "* @itsdarshan12" > .github/CODEOWNERS
               ;;
-            hotfix)
+            main | hotfix)
               echo "* @treadstone26" > .github/CODEOWNERS
               ;;
             *)
-              echo "No rule defined for branch: $TARGET_BRANCH"
+              echo "❌ Unknown branch: $TARGET_BRANCH"
               exit 0
               ;;
           esac
 
-          echo "✅ Applied CODEOWNERS rule for $TARGET_BRANCH"
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add .github/CODEOWNERS
           git commit -m "ci: enforce CODEOWNERS for $TARGET_BRANCH" || echo "No changes to commit"
-          git push origin HEAD:${{ github.event.pull_request.head.ref || steps.vars.outputs.branch }} || echo "Push skipped on push event"
+
+          # Always push to the correct branch
+          git push origin "HEAD:${{ steps.vars.outputs.headref }}"
