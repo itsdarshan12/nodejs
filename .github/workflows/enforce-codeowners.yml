@@ -42,13 +42,13 @@ jobs:
 
           case "$TARGET_BRANCH" in
             development)
-              echo "* @Ravikiran023" > .github/CODEOWNERS
+              echo "* @treadstone26" > .github/CODEOWNERS
               ;;
             quality)
-              echo "* @itsdarshan12" > .github/CODEOWNERS
+              echo "* @Ravikiran023" > .github/CODEOWNERS
               ;;
             main)
-              echo "* @treadstone26" > .github/CODEOWNERS
+              echo "* @itsdarshan12" > .github/CODEOWNERS
               ;;
             hotfix)
               echo "* @treadstone26" > .github/CODEOWNERS
