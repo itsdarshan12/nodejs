@@ -1,55 +1,52 @@
-name: Validate CODEOWNERS
+name: Sync CODEOWNERS Template
 
 on:
-  pull_request:
-    branches:
-      - development
-      - quality
-      - main
   push:
     branches:
       - development
       - quality
       - main
+      - hotfix
+
+  pull_request:
+    branches:
+      - development
+      - quality
+      - main
+      - hotfix
 
 jobs:
-  validate-codeowners:
+  sync-codeowners:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repo
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      - name: Validate CODEOWNERS by target branch
+      - name: Determine branch and copy template
         run: |
           BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
-          echo "🔍 Validating CODEOWNERS for branch: $BRANCH"
+          echo "🧠 Detected branch: $BRANCH"
 
-          case "$BRANCH" in
-            development)
-              EXPECTED="@Ravikiran023"
-              ;;
-            quality)
-              EXPECTED="@itsdarshan12"
-              ;;
-            main)
-              EXPECTED="@treadstone26"
-              ;;
-            *)
-              echo "✅ No enforcement for branch: $BRANCH"
-              exit 0
-              ;;
-          esac
+          TEMPLATE_FILE=".github/templates/CODEOWNERS.$BRANCH"
+          TARGET_FILE=".github/CODEOWNERS"
 
-          # Extract actual owner from CODEOWNERS
-          ACTUAL=$(grep -o '@.*' .github/CODEOWNERS | head -1)
-
-          echo "Expected: $EXPECTED"
-          echo "Actual:   $ACTUAL"
-
-          if [[ "$EXPECTED" != "$ACTUAL" ]]; then
-            echo "❌ CODEOWNERS mismatch. Expected: $EXPECTED but found: $ACTUAL"
-            exit 1
+          if [ ! -f "$TEMPLATE_FILE" ]; then
+            echo "⚠️ No template found for $BRANCH. Skipping..."
+            exit 0
           fi
 
-          echo "✅ CODEOWNERS validated correctly for $BRANCH"
+          cp "$TEMPLATE_FILE" "$TARGET_FILE"
+
+          if ! git diff --quiet; then
+            echo "✅ CODEOWNERS updated from template. Committing..."
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add "$TARGET_FILE"
+            git commit -m "ci: synced CODEOWNERS from $TEMPLATE_FILE"
+            git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}
+          else
+            echo "✅ CODEOWNERS already up to date."
+          fi
