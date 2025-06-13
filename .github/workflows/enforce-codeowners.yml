@@ -6,6 +6,7 @@ on:
       - development
       - quality
       - main
+      - hotfix
 
 jobs:
   preserve-codeowners:
