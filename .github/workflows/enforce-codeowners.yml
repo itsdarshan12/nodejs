@@ -40,6 +40,7 @@ jobs:
       - name: Force update CODEOWNERS
         run: |
           TARGET_BRANCH="${{ steps.vars.outputs.branch }}"
+          HEAD_REF="${{ steps.vars.outputs.headref }}"
           echo "✅ Detected target branch: $TARGET_BRANCH"
 
           case "$TARGET_BRANCH" in
@@ -66,4 +67,7 @@ jobs:
           git add .github/CODEOWNERS
           git commit -m "ci: enforce CODEOWNERS for $TARGET_BRANCH" || echo "ℹ️ No changes to commit"
 
-          git push origin HEAD:${{ steps.vars.outputs.headref }} || echo "ℹ️ Push skipped (probably push event)"
+          # Use HEAD_REF for PRs, fallback to TARGET_BRANCH for pushes
+          REMOTE_BRANCH="${HEAD_REF:-$TARGET_BRANCH}"
+
+          git push origin HEAD:$REMOTE_BRANCH || echo "ℹ️ Push skipped or failed"
