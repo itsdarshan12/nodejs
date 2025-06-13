@@ -18,28 +18,35 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Enforce CODEOWNERS Based on Target Branch
+      - name: Enforce CODEOWNERS if Conflict Detected
         run: |
           echo "Target branch: ${{ github.event.pull_request.base.ref }}"
 
-          if [[ "${{ github.event.pull_request.base.ref }}" == "development" ]]; then
-            echo "Ravikiran023 owns development"
-            echo "* @Ravikiran023" > .github/CODEOWNERS
+          FILE=".github/CODEOWNERS"
 
-          elif [[ "${{ github.event.pull_request.base.ref }}" == "quality" ]]; then
-            echo "itsdarshan12 owns quality"
-            echo "* @itsdarshan12" > .github/CODEOWNERS
+          # Only proceed if CODEOWNERS exists and has a conflict
+          if [[ -f "$FILE" ]] && grep -q '<<<<<<<' "$FILE"; then
+            echo "⚠️ Conflict detected in CODEOWNERS. Applying fix..."
 
-          elif [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
-            echo "treadstone26 owns main"
-            echo "* @treadstone26" > .github/CODEOWNERS
+            if [[ "${{ github.event.pull_request.base.ref }}" == "development" ]]; then
+              echo "* @Ravikiran023" > "$FILE"
+              echo "Applied development CODEOWNERS: @Ravikiran023"
+
+            elif [[ "${{ github.event.pull_request.base.ref }}" == "quality" ]]; then
+              echo "* @itsdarshan12" > "$FILE"
+              echo "Applied quality CODEOWNERS: @itsdarshan12"
+
+            elif [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
+              echo "* @treadstone26" > "$FILE"
+              echo "Applied main CODEOWNERS: @treadstone26"
+            fi
+
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            git add "$FILE"
+            git commit -m "ci: auto-resolved CODEOWNERS conflict for ${{ github.event.pull_request.base.ref }}"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}  
+          else
+            echo "✅ No conflict in CODEOWNERS. No action taken."
           fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git diff --quiet || (
-            git add .github/CODEOWNERS
-            git commit -m "ci: set CODEOWNERS for ${{ github.event.pull_request.base.ref }}"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          )
