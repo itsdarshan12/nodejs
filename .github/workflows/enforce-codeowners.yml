@@ -64,4 +64,4 @@ jobs:
           git commit -m "ci: enforce CODEOWNERS for $TARGET_BRANCH" || echo "No changes to commit"
 
           # Always push to the correct branch
-          git push origin "HEAD:${{ steps.vars.outputs.headref }}"
+          git push origin "$TARGET_BRANCH"
