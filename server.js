@@ -18,3 +18,4 @@
 //Test - 19 hotfix to development cycle 18 --> updated workflow v4
 //Test - 20 hotfix to development cycle 19 --> updated workflow v5
 //Test - 21 hotfix to development cycle 20 --> updated workflow v6
+//Test - 22 hotfix to development cycle 21 --> updated workflow v7
