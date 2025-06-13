@@ -18,15 +18,28 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Fetch target branch (base)
-        run: git fetch origin ${{ github.event.pull_request.base.ref }}
-
-      - name: Overwrite CODEOWNERS with target branch version
+      - name: Enforce CODEOWNERS Based on Target Branch
         run: |
-          git checkout origin/${{ github.event.pull_request.base.ref }} -- .github/CODEOWNERS
+          echo "Target branch: ${{ github.event.pull_request.base.ref }}"
+
+          if [[ "${{ github.event.pull_request.base.ref }}" == "development" ]]; then
+            echo "Ravikiran023 owns development"
+            echo "Ravikiran023  *" > .github/CODEOWNERS
+
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "quality" ]]; then
+            echo "itsdarshan12 owns quality"
+            echo "itsdarshan12  *" > .github/CODEOWNERS
+
+          elif [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
+            echo "treadstone26 owns main"
+            echo "treadstone26  *" > .github/CODEOWNERS
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git diff --quiet || (
-            git commit -am "ci: preserve CODEOWNERS from ${{ github.event.pull_request.base.ref }}"
+            git add .github/CODEOWNERS
+            git commit -m "ci: set CODEOWNERS for ${{ github.event.pull_request.base.ref }}"
             git push origin HEAD:${{ github.event.pull_request.head.ref }}
           )
