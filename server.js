@@ -23,3 +23,4 @@
 //Test - 24 hotfix to development cycle 23 --> updated workflow v9
 //Test - 25 hotfix to development cycle 24 --> updated workflow v10
 //Test - 26 hotfix to development cycle 25 --> updated workflow v11
+//Test - 27 hotfix to development cycle 26 --> updated workflow v12
