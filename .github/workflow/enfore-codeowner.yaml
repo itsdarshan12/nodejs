@@ -20,13 +20,13 @@ jobs:
           # Choose correct commit SHA based on target branch
           case "${{ github.base_ref }}" in
             main)
-              SHA="591a799"
+              SHA="75f4b29"
               ;;
             development)
-              SHA="5e6e539"
+              SHA="40060c5"
               ;;
             quality)
-              SHA="6e59d26"
+              SHA="c3e03c2"
               ;;
             *)
               echo "❌ No matching target branch. Skipping."
