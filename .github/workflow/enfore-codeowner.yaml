@@ -1,28 +1,46 @@
-name: Reset CODEOWNERS if Modified
+name: Enforce CODEOWNERS from fixed commit
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 jobs:
-  reset-codeowners:
+  enforce-codeowners:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout PR code
+      - name: Checkout PR Branch
         uses: actions/checkout@v3
         with:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GH_PAT }}
 
-      - name: Fetch base branch version of CODEOWNERS
+      - name: Pull Correct CODEOWNERS by Target Branch
         run: |
-          git fetch origin ${{ github.base_ref }}
-          git checkout origin/${{ github.base_ref }} -- .github/CODEOWNERS
+          # Choose correct commit SHA based on target branch
+          case "${{ github.base_ref }}" in
+            main)
+              SHA="591a799"
+              ;;
+            development)
+              SHA="5e6e539"
+              ;;
+            quality)
+              SHA="6e59d26"
+              ;;
+            *)
+              echo "❌ No matching target branch. Skipping."
+              exit 1
+              ;;
+          esac
 
-      - name: Commit reset CODEOWNERS
+          # Fetch the exact version of CODEOWNERS from chosen commit
+          git fetch origin $SHA
+          git checkout $SHA -- .github/CODEOWNERS
+
+      - name: Commit and Push Updated CODEOWNERS
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git commit -am "🔄 Reset CODEOWNERS from base branch"
+          git commit -am "🔄 Enforced CODEOWNERS from locked SHA" || echo "✅ No changes to commit"
           git push origin HEAD:${{ github.head_ref }}
