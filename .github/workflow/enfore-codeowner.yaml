@@ -1,15 +1,28 @@
-name: Prevent CODEOWNERS Modification
+name: Reset CODEOWNERS if Modified
 
 on:
   pull_request:
-    paths:
-      - '.github/CODEOWNERS'
+    types: [opened, synchronize]
 
 jobs:
-  block-modification:
+  reset-codeowners:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Fail if CODEOWNERS is modified
+      - name: Checkout PR code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Fetch base branch version of CODEOWNERS
         run: |
-          echo "❌ CODEOWNERS file cannot be modified in this PR."
-          exit 1
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }} -- .github/CODEOWNERS
+
+      - name: Commit reset CODEOWNERS
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git commit -am "🔄 Reset CODEOWNERS from base branch"
+          git push origin HEAD:${{ github.head_ref }}
