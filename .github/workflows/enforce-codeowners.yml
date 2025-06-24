@@ -1,0 +1,69 @@
+name: Enforce Branch-Specific CODEOWNERS
+
+on:
+  pull_request:
+    branches:
+      - development
+      - quality
+      - main
+      - hotfix
+
+  push:
+    branches:
+      - development
+      - quality
+      - main
+      - hotfix
+
+jobs:
+  enforce-codeowners:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set CODEOWNERS from branch-specific template
+        shell: bash
+        run: |
+          echo "🔍 Detecting target branch..."
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
+            HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+          else
+            TARGET_BRANCH="${GITHUB_REF##*/}"
+            HEAD_BRANCH="${GITHUB_REF##*/}"
+          fi
+
+          echo "📌 Target branch: $TARGET_BRANCH"
+          echo "📌 Head branch: $HEAD_BRANCH"
+
+          case "$TARGET_BRANCH" in
+            development)
+              cp .github/CODEOWNERS.dev .github/CODEOWNERS
+              ;;
+            quality)
+              cp .github/CODEOWNERS.quality .github/CODEOWNERS
+              ;;
+            main)
+              cp .github/CODEOWNERS.main .github/CODEOWNERS
+              ;;
+            hotfix)
+              cp .github/CODEOWNERS.hotfix .github/CODEOWNERS
+              ;;
+            *)
+              echo "❌ No CODEOWNERS template for branch: $TARGET_BRANCH"
+              exit 0
+              ;;
+          esac
+
+          echo "✅ Applied CODEOWNERS for $TARGET_BRANCH"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/CODEOWNERS
+          git commit -m "ci: apply CODEOWNERS for $TARGET_BRANCH" || echo "ℹ️ No changes to commit"
+          git push origin HEAD:$HEAD_BRANCH || echo "ℹ️ Push skipped"
