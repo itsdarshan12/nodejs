@@ -42,8 +42,15 @@ jobs:
         run: |
           echo "📌 Target branch: $TARGET_BRANCH"
           echo "📌 Head branch: $HEAD_BRANCH"
-          TEMPLATE=".github/CODEOWNERS.$TARGET_BRANCH"
 
+        
+          # Normalize hotfix to use main's template
+          if [[ "$TARGET_BRANCH" == "hotfix" ]]; then
+            TEMPLATE=".github/CODEOWNERS.main"
+          else
+            TEMPLATE=".github/CODEOWNERS.$TARGET_BRANCH"
+          fi
+      
           if [ -f "$TEMPLATE" ]; then
             cp "$TEMPLATE" .github/CODEOWNERS
             echo "✅ CODEOWNERS restored from $TEMPLATE"
@@ -51,6 +58,7 @@ jobs:
             echo "❌ No template found for branch: $TARGET_BRANCH"
             exit 1
           fi
+
 
       - name: Commit and push updated CODEOWNERS
         run: |
