@@ -52,7 +52,7 @@ jobs:
               cp .github/CODEOWNERS.main .github/CODEOWNERS
               ;;
             hotfix)
-              cp .github/CODEOWNERS.hotfix .github/CODEOWNERS
+              cp .github/CODEOWNERS.main .github/CODEOWNERS
               ;;
             *)
               echo "❌ No CODEOWNERS template for branch: $TARGET_BRANCH"
