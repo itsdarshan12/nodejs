@@ -1,7 +1,8 @@
-name: Enforce Branch-Specific CODEOWNERS
+name: Auto-Restore CODEOWNERS
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
     branches:
       - development
       - quality
@@ -16,54 +17,45 @@ on:
       - hotfix
 
 jobs:
-  enforce-codeowners:
+  restore-codeowners:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source branch
+      - name: Checkout head branch
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
 
-      - name: Set CODEOWNERS from branch-specific template
-        shell: bash
+      - name: Determine target and head branches
+        id: vars
         run: |
-          echo "🔍 Detecting target branch..."
-
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
-            HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+            echo "TARGET_BRANCH=${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+            echo "HEAD_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
           else
-            TARGET_BRANCH="${GITHUB_REF##*/}"
-            HEAD_BRANCH="${GITHUB_REF##*/}"
+            echo "TARGET_BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
+            echo "HEAD_BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
           fi
 
+      - name: Restore CODEOWNERS from template
+        run: |
           echo "📌 Target branch: $TARGET_BRANCH"
           echo "📌 Head branch: $HEAD_BRANCH"
+          TEMPLATE=".github/CODEOWNERS.$TARGET_BRANCH"
 
-          case "$TARGET_BRANCH" in
-            development)
-              cp .github/CODEOWNERS.dev .github/CODEOWNERS
-              ;;
-            quality)
-              cp .github/CODEOWNERS.quality .github/CODEOWNERS
-              ;;
-            main)
-              cp .github/CODEOWNERS.main .github/CODEOWNERS
-              ;;
-            hotfix)
-              cp .github/CODEOWNERS.main .github/CODEOWNERS
-              ;;
-            *)
-              echo "❌ No CODEOWNERS template for branch: $TARGET_BRANCH"
-              exit 0
-              ;;
-          esac
+          if [ -f "$TEMPLATE" ]; then
+            cp "$TEMPLATE" .github/CODEOWNERS
+            echo "✅ CODEOWNERS restored from $TEMPLATE"
+          else
+            echo "❌ No template found for branch: $TARGET_BRANCH"
+            exit 1
+          fi
 
-          echo "✅ Applied CODEOWNERS for $TARGET_BRANCH"
-
+      - name: Commit and push updated CODEOWNERS
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .github/CODEOWNERS
-          git commit -m "ci: apply CODEOWNERS for $TARGET_BRANCH" || echo "ℹ️ No changes to commit"
+          git commit -m "ci: restore CODEOWNERS for $TARGET_BRANCH" || echo "ℹ️ No changes to commit"
           git push origin HEAD:$HEAD_BRANCH || echo "ℹ️ Push skipped"
